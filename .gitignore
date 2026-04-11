@@ -1,0 +1,12 @@
+# Build artifacts
+build/
+bin/
+lib/
+*.o
+*.so
+
+# Quickshell state
+.local/state/caelestia
+
+# System files
+/tmp/sddm_sync.log
