@@ -24,7 +24,7 @@ fi
 
 # --- Dependencies ---
 BASE_DEPS=(cmake extra-cmake-modules qt6-base qt6-declarative qt6-wayland qt6-svg gcc make pkg-config imagemagick hyprland wallust swww waypaper)
-AUR_DEPS=(quickshell-git)
+AUR_DEPS=(quickshell-git caelestia-cli fastfetch)
 
 echo -e "\n${CYAN}[1/5] Updating Package Database & Installing Base Dependencies...${NC}"
 sudo pacman -Sy --needed --noconfirm "${BASE_DEPS[@]}"
@@ -44,6 +44,14 @@ if [ -z "$AUR_HELPER" ]; then
     cd /tmp/yay && makepkg -si --noconfirm
     cd -
     AUR_HELPER="yay"
+fi
+
+# --- Conflict Resolution ---
+echo -e "\n${CYAN}[1.5/5] Resolving package conflicts...${NC}"
+# Explicitly remove quickshell stable to allow quickshell-git installation
+if pacman -Qi quickshell >/dev/null 2>&1 && ! pacman -Qi quickshell-git >/dev/null 2>&1; then
+    echo -e "${BLUE}Removing conflicting 'quickshell' to install 'quickshell-git'...${NC}"
+    sudo pacman -Rns --noconfirm quickshell
 fi
 
 echo -e "\n${CYAN}[2/5] Installing AUR Dependencies (${AUR_HELPER})...${NC}"
