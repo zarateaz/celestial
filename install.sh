@@ -26,8 +26,8 @@ fi
 BASE_DEPS=(cmake extra-cmake-modules qt6-base qt6-declarative qt6-wayland qt6-svg gcc make pkg-config imagemagick hyprland wallust swww waypaper)
 AUR_DEPS=(quickshell-git)
 
-echo -e "\n${CYAN}[1/5] Installing Base Dependencies...${NC}"
-sudo pacman -S --needed --noconfirm "${BASE_DEPS[@]}"
+echo -e "\n${CYAN}[1/5] Updating Package Database & Installing Base Dependencies...${NC}"
+sudo pacman -Sy --needed --noconfirm "${BASE_DEPS[@]}"
 
 # --- AUR Helper Detection ---
 AUR_HELPER=""
