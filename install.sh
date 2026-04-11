@@ -60,6 +60,10 @@ $AUR_HELPER -S --needed --noconfirm "${AUR_DEPS[@]}"
 # --- Config Setup ---
 echo -e "\n${CYAN}[3/5] Setting up configurations...${NC}"
 mkdir -p "$HOME/.config"
+
+# Clean old configs to avoid "dangling symlinks" or conflicts
+rm -rf "$HOME/.config/hypr" "$HOME/.config/waypaper" "$HOME/.config/quickshell/caelestia"
+
 cp -r configs/hypr "$HOME/.config/"
 cp -r configs/waypaper "$HOME/.config/"
 mkdir -p "$HOME/.config/quickshell/caelestia"
