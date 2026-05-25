@@ -6,7 +6,7 @@
 
 # variables
 terminal=kitty
-wallDIR="$HOME/celestial/shell/wallpapers"
+wallDIR="$HOME/Pictures/wallpapers"
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 wallpaper_modified="$HOME/.config/hypr/wallpaper_effects/.wallpaper_modified"
@@ -61,7 +61,7 @@ else
 fi
 
 # Check if a dedicated SDDM wallpaper folder exists and has content
-DedicatedSddmWall="$HOME/celestial/shell/wallpapers/sddm"
+DedicatedSddmWall="$HOME/Pictures/wallpapers/sddm"
 if [[ -d "$DedicatedSddmWall" ]]; then
     # Pick the first image found (supports png, jpg, jpeg)
     FirstImg=$(find "$DedicatedSddmWall" -maxdepth 1 -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | head -n 1)
@@ -86,7 +86,7 @@ fi
 # Check if sudo can run without a password. 
 # If it requires one, we skip to avoid hanging the background process.
 if sudo -n true 2>/dev/null; then
-    sudo /home/zarate/.config/hypr/scripts/sddm_root_helper.sh "$wallpaper_path" "$color1,$color7,$color10,$color12,$color13"
+    sudo /usr/local/bin/sddm_root_helper "$wallpaper_path" "$color1,$color7,$color10,$color12,$color13"
 else
     echo "$(date): Sudo requires a password. Skipping SDDM update." >> /tmp/sddm_sync.log
     # This message will be visible in /tmp/sddm_update_last.log

@@ -4,9 +4,21 @@ bin/
 lib/
 *.o
 *.so
+*.a
 
-# Quickshell state
-.local/state/caelestia
+# Quickshell state/cache
+.local/state/caelestia/
 
-# System files
-/tmp/sddm_sync.log
+# System temp files
+/tmp/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

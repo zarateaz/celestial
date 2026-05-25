@@ -8,7 +8,10 @@
 
 # Variables
 scriptsDir=$HOME/.config/hypr/scripts
-wallpaper=$HOME/Pictures/wallpapers/neon_cyberpunk.png
+# Try to find any wallpaper in the standard wallpaper dir
+wallpaper=$(find "$HOME/Pictures/wallpapers" -maxdepth 2 \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \) 2>/dev/null | head -n1)
+# Fallback to a specific file if defined
+[ -z "$wallpaper" ] && wallpaper="$HOME/Pictures/wallpapers/neon_cyberpunk.png"
 waybar_style="$HOME/.config/waybar/style/[Extra] Neon Circuit.css"
 kvantum_theme="catppuccin-mocha-blue"
 color_scheme="prefer-dark"
