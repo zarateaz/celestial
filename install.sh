@@ -63,12 +63,12 @@ trap 'kill "$SUDO_KEEP_ALIVE_PID" 2>/dev/null || true' EXIT
 # ─────────────────────────────────────────
 # Auto-clonado si se ejecuta como script individual
 # ─────────────────────────────────────────
-if [[ ! -d "$BASE_DIR/config" ]] || [[ ! -f "$BASE_DIR/zshrc" ]]; then
+if [[ ! -d "$BASE_DIR/configs" && ! -d "$BASE_DIR/config" ]] || [[ ! -f "$BASE_DIR/zshrc" ]]; then
     echo -e "$INFO Archivos locales no encontrados en $BASE_DIR."
-    echo -e "$INFO Clonando repositorio completo de Celestial Hyprland..."
-    TMP_SETUP="$REAL_HOME/.hyperland-setup"
+    echo -e "$INFO Clonando repositorio completo de Celestial..."
+    TMP_SETUP="$REAL_HOME/.celestial-setup"
     rm -rf "$TMP_SETUP"
-    git clone https://github.com/zarateaz/hyperland.git "$TMP_SETUP"
+    git clone --recurse-submodules https://github.com/zarateaz/celestial.git "$TMP_SETUP"
     BASE_DIR="$TMP_SETUP"
     echo -e "$OK Repositorio clonado en $BASE_DIR"
 fi
@@ -278,20 +278,20 @@ mkdir -p "$REAL_HOME/.config"
 # Limpiar enlaces rotos antes de copiar
 find "$REAL_HOME/.config" -xtype l -delete 2>/dev/null || true
 
-# Copiar todas las carpetas de config/ o configs/
+# Copiar todas las carpetas y archivos de configs/ o config/
 CONFIG_SRC=""
-if [ -d "$BASE_DIR/config" ]; then
-    CONFIG_SRC="$BASE_DIR/config"
-elif [ -d "$BASE_DIR/configs" ]; then
+if [ -d "$BASE_DIR/configs" ]; then
     CONFIG_SRC="$BASE_DIR/configs"
+elif [ -d "$BASE_DIR/config" ]; then
+    CONFIG_SRC="$BASE_DIR/config"
 fi
 
 if [ -n "$CONFIG_SRC" ]; then
-    for dir in "$CONFIG_SRC"/*/; do
-        [ -d "$dir" ] || continue
-        dirname=$(basename "$dir")
-        echo -e "$INFO  → .config/$dirname"
-        cp -r "$dir" "$REAL_HOME/.config/"
+    for item in "$CONFIG_SRC"/*; do
+        [ -e "$item" ] || continue
+        itemname=$(basename "$item")
+        echo -e "$INFO  → .config/$itemname"
+        cp -rf "$item" "$REAL_HOME/.config/"
     done
 fi
 rm -f "$REAL_HOME/.config/hypr/.initial_startup_done"

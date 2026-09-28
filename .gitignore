@@ -1,10 +1,10 @@
 # Build artifacts
-build/
-bin/
-lib/
+/build/
 *.o
 *.so
 *.a
+!configs/bin/
+!config/bin/
 
 # Quickshell state/cache
 .local/state/caelestia/
