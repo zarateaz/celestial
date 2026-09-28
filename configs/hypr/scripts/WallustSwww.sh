@@ -1,26 +1,17 @@
 #!/bin/bash
 # /* ---- 💫 https://github.com/JaKooLit 💫 ---- */  ##
-# Wallust: derive colors from the current wallpaper and update templates.
-#
-# Usage:
-#   WallustSwww.sh [absolute_path_to_wallpaper]
-#
-# When called WITH a path (e.g. from waypaper post_command), the wallpaper
-# has ALREADY been applied by waypaper/swww — this script only runs wallust
-# to regenerate the color palette and refreshes UI components.
-#
-# When called WITHOUT a path (standalone), it detects the current wallpaper
-# from the awww cache and applies it with the grow transition effect.
+# Wallust: derive colors from the current wallpaper and update templates
+# Usage: WallustSwww.sh [absolute_path_to_wallpaper]
 
 set -euo pipefail
 
-# ── Paths ────────────────────────────────────────────────────────────────────
+# Inputs and paths
 passed_path="${1:-}"
-cache_dir="$HOME/.cache/awww/"
+cache_dir="$HOME/.cache/swww/"
 rofi_link="$HOME/.config/rofi/.current_wallpaper"
 wallpaper_current="$HOME/.config/hypr/wallpaper_effects/.wallpaper_current"
 
-# ── Helper: get focused monitor name ─────────────────────────────────────────
+# Helper: get focused monitor name (prefer JSON)
 get_focused_monitor() {
   if command -v jq >/dev/null 2>&1; then
     hyprctl monitors -j | jq -r '.[] | select(.focused) | .name'
@@ -29,98 +20,73 @@ get_focused_monitor() {
   fi
 }
 
-# ── Determine wallpaper path ──────────────────────────────────────────────────
+# Determine wallpaper_path
 wallpaper_path=""
-
 if [[ -n "$passed_path" && -f "$passed_path" ]]; then
-  # Called by waypaper or other scripts
-  wallpaper_path=$(realpath "$passed_path")
+  wallpaper_path="$passed_path"
 else
-  # Standalone call — detect current wallpaper
+  # Try to read from swww cache for the focused monitor, with a short retry loop
   current_monitor="$(get_focused_monitor)"
-  
-  # Try to query swww/awww directly
-  if command -v swww >/dev/null 2>&1; then
-      wallpaper_path=$(swww query | grep "$current_monitor" | awk -F 'image: ' '{print $2}' || true)
-  fi
+  cache_file="$cache_dir$current_monitor"
 
-  # Fallback: check awww cache
-  if [[ -z "${wallpaper_path:-}" || ! -f "$wallpaper_path" ]]; then
-      cache_file="$cache_dir$current_monitor"
-      if [[ -f "$cache_file" ]] && command -v awww >/dev/null 2>&1; then
-        wallpaper_path=$(awww query | grep "$current_monitor" | awk '{print $9}' || true)
-      fi
-  fi
+  # Wait briefly for swww to write its cache after an image change
+  for i in {1..10}; do
+    if [[ -f "$cache_file" ]]; then
+      break
+    fi
+    sleep 0.1
+  done
 
-  # Final fallback: use saved current wallpaper
-  if [[ -z "${wallpaper_path:-}" || ! -f "$wallpaper_path" ]]; then
-    [[ -f "$wallpaper_current" ]] && wallpaper_path=$(cat "$wallpaper_current" || true)
+  if [[ -f "$cache_file" ]]; then
+    wallpaper_path=$(swww query 2>/dev/null | grep "$current_monitor" | sed -E 's/.*image: //' || true)
+    if [[ -z "${wallpaper_path:-}" || ! -f "$wallpaper_path" ]]; then
+      wallpaper_path=$(swww query 2>/dev/null | head -n 1 | sed -E 's/.*image: //' || true)
+    fi
   fi
 fi
 
-# ── Bail if no valid wallpaper found ─────────────────────────────────────────
 if [[ -z "${wallpaper_path:-}" || ! -f "$wallpaper_path" ]]; then
-  echo "Error: No valid wallpaper found." >&2
-  exit 1
+  # Nothing to do; avoid failing loudly so callers can continue
+  exit 0
 fi
 
-# ── Apply wallpaper ──────────────────────────────────────────────────────────
-# We ALWAYS apply to ensure synchronization, even if called from waypaper
-_POS="$(hyprctl cursorpos | tr -d ' ' 2>/dev/null || echo 'center')"
-
-# Detect engine
-if command -v awww >/dev/null 2>&1; then
-    ENGINE="awww"
-else
-    ENGINE="swww"
-fi
-
-if [[ "$ENGINE" == "awww" ]]; then
-    # awww doesn't support swww transition flags
-    awww img "$wallpaper_path" || true
-else
-    swww img "$wallpaper_path" \
-        --transition-type  grow            \
-        --transition-fps   144             \
-        --transition-duration 1.2          \
-        --transition-bezier "0.25,0.46,0.45,0.94" \
-        --transition-pos   "$_POS"         \
-        --resize           crop || true
-fi
-
-# ── Save current wallpaper path ───────────────────────────────────────────────
+# Update helpers that depend on the path
 ln -sf "$wallpaper_path" "$rofi_link" || true
 mkdir -p "$(dirname "$wallpaper_current")"
-echo "$wallpaper_path" > "$wallpaper_current"
+if [[ "$wallpaper_path" != "$wallpaper_current" ]]; then
+  cp -f "$wallpaper_path" "$wallpaper_current" || true
+fi
 
-# ── Run wallust to regenerate color templates ─────────────────────────────────
-# Optimization: For very large images (like 8K), wallust can be slow.
-# We create a low-res preview for color extraction to speed it up (~20s -> <1s).
+# Run wallust to regenerate color templates
+# Optimization: For very large images, use a downscaled preview for sub-second color generation
 if command -v magick >/dev/null 2>&1; then
-    magick "$wallpaper_path" -resize 720x720\> /tmp/wallust_preview.jpg
-    wallust run -s /tmp/wallust_preview.jpg || wallust run -s "$wallpaper_path" || true
+    magick "$wallpaper_path" -resize 720x720\> /tmp/wallust_preview.jpg 2>/dev/null || true
+    if [ -f /tmp/wallust_preview.jpg ]; then
+        wallust run -s /tmp/wallust_preview.jpg || wallust run -s "$wallpaper_path" || true
+    else
+        wallust run -s "$wallpaper_path" || true
+    fi
 else
     wallust run -s "$wallpaper_path" || true
 fi
 
-# ── Sync with Caelestia Shell ──────────────────────────────────────────────────
-# This ensures Caelestia shows the correct background and updates its state
+# Sync with Caelestia Shell (Quickshell)
 mkdir -p "$HOME/.local/state/caelestia/wallpaper"
 echo "$wallpaper_path" > "$HOME/.local/state/caelestia/wallpaper/path.txt"
+if command -v caelestia >/dev/null 2>&1; then
+    caelestia shell wallpaper set "$wallpaper_path" 2>/dev/null || true
+fi
 
-# Trigger Caelestia wallpaper change (works with shell IPC)
-caelestia shell wallpaper set "$wallpaper_path" || true
-
-# ── Refresh UI components ─────────────────────────────────────────────────────
+# Refresh UI components
 pkill -SIGUSR2 waybar 2>/dev/null || true   # Waybar colors
 pkill -SIGUSR1 kitty  2>/dev/null || true   # Kitty colors
 
-# ── Update SDDM login screen wallpaper ───────────────────────────────────────
+# Update SDDM login screen wallpaper in background
 if [[ -f "$HOME/.config/hypr/scripts/sddm_wallpaper.sh" ]]; then
-  # Ensure the wallpaper path is absolute and exists
-  if [[ -f "$wallpaper_path" ]]; then
-    # Run in background to avoid blocking the main script or waypaper UI
-    # We use a dedicated log file to help debugging quality issues
     (bash "$HOME/.config/hypr/scripts/sddm_wallpaper.sh" --normal "$wallpaper_path" >> /tmp/sddm_update.log 2>&1 &)
-  fi
+fi
+
+# Compile and apply dynamic cursor theme if present
+if [ -f "$HOME/.config/hypr/scripts/CompileCursor.sh" ]; then
+    bash "$HOME/.config/hypr/scripts/CompileCursor.sh" &
 fi
